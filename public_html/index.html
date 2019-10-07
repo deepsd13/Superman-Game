@@ -1,0 +1,310 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Superman game</title>
+
+        <script src="https://zimjs.org/cdn/1.2.0/createjs_min.js"></script>
+        <script src="https://zimjs.org/cdn/10.5.1/zim.js"></script>
+
+        <script>
+            var scaling = "full"; // this will make the game in full screen
+            var width = 1920;
+            var height = 768;
+            var outerColor = dark;
+            var foodAssets = ["burrito.png", "pizza.png", "taco.png"]; //adding the food assets
+            //this are the assets which will floating in the game
+            var floatingAssets = ["bomb.png", "burrito.png", "pizza.png", "taco.png", "kryptonite.png"];
+            //adding other assets
+            var otherAssets = floatingAssets.concat("superman.png", "boom.png", "boom.mp3", "tasty.mp3", "delicious.mp3", "scream.mp3", "ouch.mp3", "theme.mp3");
+            var path = "assets/"; //the path for the assets
+
+
+
+            var frame = new Frame(scaling, width, height, null, outerColor, otherAssets, path);
+            frame.on("ready", function () {
+                zog("ready from ZIM Frame"); // logs in console
+
+
+                var stage = frame.stage;
+                var stageW = frame.width;
+                var stageH = frame.height;
+                //the text for the label
+                var gameText = "Welcome to the Game! In this game you will be controlling Superman"
+                        + " with your keyboard. Your goal is to score as many points as you can. You can earn"
+                        + " points by eating the food floating on the screen. But be careful, eating kryptonite will"
+                        + " result in losing 5 points. The bomb will explode if you get in contact and the game will end."
+                        + " Click Start The Game to start playing.";
+
+                //label which will be added to pane
+                var description = new Label({
+                    text: gameText,
+                    size: 20,
+                    font: "cursive",
+                    color: "white",
+                    fontOptions: "italic bold",
+                    labelWidth: 590
+
+                })
+                //creating the pane
+                var pane = new Pane({width: 600, height: 400, titleBar: description, backgroundColor: "black", modal: false, displayClose: false});
+                var startGame = new Button(320, 70, "Start The Game", "green").center(pane).mov(0, 150); //the button inside the pane
+                startGame.on("click", function () {
+                    //starts the game when the button is clicked
+                    pane.hide();
+
+                    var superman = frame.asset("superman.png").sca(0.6).centerReg(); // the superman asset
+                    //motion controller for superman
+                    new MotionController(superman, "keydown", 7, null, new Boundary(superman.width / 2, superman.height / 2, stageW - superman.width, stageH - superman.height));
+
+                    //different starting and ending point for floating assets
+                    var options = [
+                        [-300, rand(stageH), stageW + 300, rand(stageH)],
+                        [stageW + 300, rand(stageH), -300, rand(stageH)],
+                        [rand(stageW), -300, rand(stageW), stageH + 300],
+                        [rand(stageW), stageH + 300, rand(stageW), -300],
+                    ];
+
+
+                    //I have different container for food, bomb and krytonite
+                    //because diferent actions occurs when superman hits any
+                    //one of them
+
+                    //the food container - contains only the food assets
+                    var food = new Container(stageW, stageH).addTo();
+                    interval({min: 200, max: 2000}, function () {
+                        var r = Math.floor(Math.random() * 4);
+                        var option = options[r];
+
+                        //randomly adding food assets to the screen
+                        frame.asset(shuffle(foodAssets)[0])
+
+                                .clone()
+                                .centerReg()
+                                .loc(option[0], option[1], food)
+                                .animate({
+                                    props: {rotation: [-360, 360]},
+                                    time: rand(3000, 8000),
+                                    loop: true,
+                                    ease: "linear"
+                                })
+                                .animate({
+                                    props: {x: option[2], y: option[3]},
+                                    ease: "linear",
+                                    time: rand(6000, 10000)
+                                });
+                    });
+
+                    //bomb container
+                    var bomb = new Container(stageW, stageH).addTo();
+                    interval({min: 5000, max: 10000}, function () {
+
+                        var r = Math.floor(Math.random() * 4);
+                        var option = options[r];
+
+                        frame.asset("bomb.png")
+                                .clone()
+                                .centerReg()
+                                .loc(option[0], option[1], bomb)
+                                .animate({
+                                    props: {rotation: [-360, 360]},
+                                    time: rand(3000, 8000),
+                                    loop: true,
+                                    ease: "linear"
+                                })
+                                .animate({
+                                    props: {x: option[2], y: option[3]},
+                                    ease: "linear",
+                                    time: rand(6000, 10000)
+                                });
+                    });
+
+                    //kryptonite container
+                    var kryptonite = new Container(stageW, stageH).addTo();
+                    interval({min: 5000, max: 10000}, function () {
+                        var r = Math.floor(Math.random() * 4);
+                        var option = options[r];
+
+                        frame.asset("kryptonite.png")
+                                .clone()
+                                .centerReg()
+                                .loc(option[0], option[1], kryptonite)
+                                .animate({
+                                    props: {rotation: [-360, 360]},
+                                    time: rand(3000, 8000),
+                                    loop: true,
+                                    ease: "linear"
+                                })
+                                .animate({
+                                    props: {x: option[2], y: option[3]},
+                                    ease: "linear",
+                                    time: rand(6000, 10000)
+                                });
+                    });
+
+
+                    //label for the title 'Score'
+                    var scrLabel = new Label({
+                        text: "SCORE",
+                        size: 50,
+                        font: "cursive",
+                        color: "white",
+                        fontOptions: "italic bold",
+                        outlineColor: "black",
+                        shadowColor: "black"
+                    });
+                    scrLabel.pos(10, 40);
+
+                    var score = 0;
+
+                    //label which keeps track of the score
+                    var scr = new Label({
+                        text: score,
+                        size: 40,
+                        font: "cursive",
+                        color: "white",
+                        fontOptions: "italic bold",
+                        outlineColor: "black",
+                        shadowColor: "black"
+                    });
+                    scr.pos(10, 100);
+
+                    // a sprite for the bomb explosion
+                    var bombExplosion = new Sprite(frame.asset("boom.png"), 8, 6).sca(70);
+                    //the function explode, which will remove all the assets from the screen, display the sprite
+                    // and diplay "Game Over" and the score the player scored
+
+                    function explode(obj) {
+                        obj.removeFrom();
+                        bombExplosion.centerReg().loc(obj).run();
+                        frame.asset("boom.mp3").play();
+                        frame.asset("scream.mp3").play();
+                        superman.removeFrom();
+                        food.removeFrom();
+                        kryptonite.removeFrom();
+                        bomb.removeFrom();
+                        scrLabel.removeFrom();
+                        scr.removeFrom();
+
+                        // after 1 sec delay the final score is displayed
+                        timeout(1000, function () {
+
+
+                            var gameOver = new Label({
+                                text: "GAME OVER!!!!\n Your Score:" + score,
+                                size: 50,
+                                font: "cursive",
+                                color: "blue",
+                                rollColor: "red",
+                                fontOptions: "bold",
+                                outlineColor: "black",
+                                shadowColor: "black"
+                            });
+
+                            gameOver.center();
+                        })
+
+
+
+                    }
+                    // the fuction eat, removes the object and adds score
+                    function eat(obj) {
+                        obj.removeFrom();
+                        score = score + 1;
+                        scr.text = score;
+                        var sound = rand(1, 2);
+                        //randomly generating sound
+                        if (sound == 1) {
+                            frame.asset("tasty.mp3").play();
+                        } else
+                            frame.asset("delicious.mp3").play();
+
+                        // if score is zero the labels changes back to default color
+                        if (score == 0) {
+                            scr.color = "white";
+                            scrLabel.color = "white";
+                        }
+                        // if score is positive the labels changes to green
+                        if (score > 0) {
+                            scr.color = "green";
+                            scrLabel.color = "green";
+
+                        }
+                    }
+                    // the hurt function is for kryptonite
+                    function hurt(obj) {
+                        obj.removeFrom();
+                        score = score - 5;
+                        scr.text = score;
+                        frame.asset("ouch.mp3").play();
+
+                        if (score == 0) {
+                            scr.color = "white";
+                        }
+                        // if score is negative the label changes to red
+                        if (score < 0) {
+                            scr.color = "red"
+                            scrLabel.color = "red";
+
+
+                        }
+                    }
+
+                    var ticker = Ticker.add(function () {
+
+                        // when superman hits any food object eat function is called
+                        food.loop(function (obj) {
+                            if (obj.hitTestCircle(superman)) {
+                                eat(obj);
+                            }
+                        }, true)
+
+                        // when superman hits bomb explode function is called
+                        bomb.loop(function (obj) {
+                            if (obj.hitTestCircle(superman)) {
+                                explode(obj);
+
+                            }
+                        }, true)
+
+                        // when superman hits kryptonite hurt function is called
+                        kryptonite.loop(function (obj) {
+                            if (obj.hitTestCircle(superman)) {
+                                hurt(obj);
+                            }
+                        }, true)
+                    });
+
+
+                    stage.update(); // this is needed to show any changes
+
+
+
+                });
+                pane.show(); // needed to display the pane
+
+
+            }); // end of ready
+
+
+
+
+
+
+        </script>
+
+        <meta name="viewport" content="width=device-width, user-scalable=no" />
+
+    </head>
+
+    <!--    setting background image for the game-->
+    <style>
+        body {
+            background-image:url('assets/background.jpg');
+            background-repeat: no-repeat;
+            background-size: 100%;
+        }
+    </style>
+    <body>
+    </body>
+</html>
